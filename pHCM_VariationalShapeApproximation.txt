@@ -1,0 +1,38 @@
+First, why is Variational shape approximation (VSA) a good idea?
+- we get an exact error function for a given proxy set.  We can exactly represent the error function (as a height field or color field) over each proxy.
+- we have a good chance of finding the globally optimal proxy configuration for a given error bound.  If the globally optimal configuration is not found, then a locally optimal configuration is still found.
+
+pHCM for variational shape approximation
+	Here we focus on a fast method for computing the optimal proxies for a given input mesh and error bound.  The constrained Delaunay Triangulation (CDT) is not considered (but its implementation ought to be massively parallel.)
+
+Background:
+pHCM is a parallel version of HCM, which is a fast method for solving Eikonal equations.  HCM is a domain decomposition method that combines Fast Marching Method (FMM) on the coarse level nad Fast Sweeping Method on the fine level.
+
+
+first, FMM for VSA is already the algorithm stated in the paper.  Few modifications:
+- triangles are ACCEPTED iff popped off Q
+- when T is popped, recompute neighbors' error, taking the min error available (and setting the label as the one with the min error)
+- add FAR neighbors to the queue and update the position within Q for the CONSIDERED neighbors if their label changed.
+
+A triangle doesn't need to appear multiple times on Q with a different label.  Only the smallest error label matters.
+
+FSM for VSA:
+Each "sweep" is an initial proxy.  Each proxy computes the error over the entire triangle set, updating the label only if the error is smaller.
+Unlike FSM for Eikonal in 2D and 3D where there are 4 and 8 sweep directions, here there could be thousands --> massively parallelize, probably according to Zhao's original parallelization.  Or maybe this is clearly a bad idea as a standalone method.
+
+HCM:
+does domain decomposition alone give any advantage?
+	Yes!  Each cell C still has a list of tagged sweep directions.  Neighbor cells N(c) can activate directions of C as in HCM.  When it comes time to process a C, it deactivates all its tagged directions and performs those sweeps.
+	
+Domain decomposition:
+Region growing on input mesh using a Fast-access neighborhood to segment the input into cells	
+	Since there is no simple geometric relationship between cells, each triangle must hold onto its cell label.
+Alternatively, we can divide the bounding box into boxes.  A triangle belongs to a box if its barycenter is inside the box.  Each cell then holds onto a list of its triangles.
+
+Initialization: start with only the sweeping directions that are defined within the initial cell(s).  These come from the seed triangles.
+
+The first implementation makes more mathematical sense-- a wavefront spreads over a manifold represented by the mesh.  The cells are then 2D regions over the parameterization domain
+
+
+Other interesting consideration:
+Since it was so easy to translate an algorithm developed for an Eikonal equation to variational shape approximation, is the VSA error function actually an Eikonal equation?
