@@ -1,2 +1,2 @@
 # cloudmeshsimplifier
-A modern approach to trianble decimation
+A modern approach to triangle decimation
